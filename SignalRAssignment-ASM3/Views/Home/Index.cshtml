@@ -1,0 +1,138 @@
+﻿@model PaginatedList<SignalRAssignment_ASM3.Models.Post>
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center d-flex gap-3 flex-column">
+    <h3>Welcome to Posts Management</h3>
+
+    <div class="container d-flex gap-3 flex-column ">
+        <h4>Latest Posts</h4>
+        <form asp-controller="Home" asp-action="Index" method="get">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="Search" name="searchString">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="submit">Search</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="container">
+            <div class="d-flex flex-column align-items-center">
+                @foreach (var post in Model)
+                {
+
+                    <a href="@Url.Action("Details", "Posts", new { id = post.PostId })" style="text-decoration: none;" class="col-6 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <small class="text-muted">Author: @post.User.FullName</small>
+                                <small class="text-muted">Published on: @post.CreateDate.ToShortDateString()</small>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title">@post.Title</h6>
+                                <p class="card-text">@post.Content</p>
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <small class="text-muted">Category: @post.PostCategory.CategoryName</small>
+                                </li>
+                            </ul>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+
+
+
+
+        <nav aria-label="Posts navigation">
+            <ul class="pagination d-flex justify-content-center">
+                @if (Model.HasPreviousPage)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index" asp-route-pageNumber="@(Model.PageIndex - 1)">Previous</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">Previous</span>
+                    </li>
+                }
+
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                        <a class="page-link" href="?pageNumber=@i&pageSize=10">@i</a>
+                    </li>
+                }
+
+                @if (Model.HasNextPage)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index" asp-route-pageNumber="@(Model.PageIndex + 1)">Next</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">Next</span>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.11/signalr.min.js"></script>
+    <script type="text/javascript">
+        const connection = new signalR.HubConnectionBuilder().withUrl("/PostHub/post").build();
+
+        connection.on("ReceivePostUpdate", function (post) {
+            const existingPostCard = document.getElementById(`post-${post.postId}`);
+
+            if (existingPostCard) {
+                existingPostCard.querySelector('.card-title').textContent = post.title;
+                existingPostCard.querySelector('.card-text').textContent = post.content;
+                existingPostCard.querySelector('.text-muted.author').textContent = `Author: ${post.user.fullName}`;
+                existingPostCard.querySelector('.text-muted.published-on').textContent = `Published on: ${new Date(post.createDate).toLocaleDateString()}`;
+                existingPostCard.querySelector('.text-muted.category').textContent = `Category: ${post.categoryName}`;
+            } else {
+                const postCard = document.createElement("div");
+                postCard.id = `post-${post.postId}`;
+                postCard.classList.add("col-md-4", "mb-4");
+                postCard.innerHTML = `
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <small class="text-muted author">Author: ${post.user.fullName}</small>
+                            <small class="text-muted published-on">Published on: ${new Date(post.createDate).toLocaleDateString()}</small>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title">${post.title}</h6>
+                            <p class="card-text">${post.content}</p>
+                            <a href="/Posts/Details/${post.postId}" class="btn btn-primary">Detail</a>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <small class="text-muted category">Category: ${post.categoryName}</small>
+                            </li>
+                        </ul>
+                    </div>
+                `;
+
+                const postContainer = document.getElementById("postContainer");
+                postContainer.insertBefore(postCard, postContainer.firstChild);
+            }
+        });
+
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
+    </script>
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

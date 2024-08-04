@@ -1,0 +1,180 @@
+﻿@model PaginatedList<SignalRAssignment_ASM3.Models.Post>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<form asp-controller="Posts" asp-action="Index" method="get">
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Search" name="searchString">
+        <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+    </div>
+</form>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                Title
+            </th>
+            <th>
+                Content
+            </th>
+            <th>
+                Publish Status
+            </th>
+            <th>
+                Category Name
+            </th>
+            <th>
+                User Email
+            </th>
+
+            <th>
+                Create Date
+            </th>
+            <th>
+                Update Date
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="postsTableBody">
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Title)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Content)
+            </td>
+            <td>
+                @(item.PublishStatus.Equals("0") ? "Publish" : "Private")
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PostCategory.CategoryName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.User.Email)
+            </td>
+
+                <td>
+                    @Html.DisplayFor(modelItem => item.CreateDate)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.UpdateDate)
+                </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.PostId">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.PostId">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.PostId">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+
+
+
+<nav aria-label="Posts navigation">
+    <ul class="pagination d-flex justify-content-center">
+        @if (Model.HasPreviousPage)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-pageNumber="@(Model.PageIndex - 1)">Previous</a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <span class="page-link">Previous</span>
+            </li>
+        }
+
+        @for (int i = 1; i <= Model.TotalPages; i++)
+        {
+            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                <a class="page-link" href="?pageNumber=@i&pageSize=10">@i</a>
+            </li>
+        }
+
+        @if (Model.HasNextPage)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-pageNumber="@(Model.PageIndex + 1)">Next</a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <span class="page-link">Next</span>
+            </li>
+        }
+    </ul>
+</nav>
+
+@section Scripts{
+    <script type="text/javascript">
+        const connection = new signalR.HubConnectionBuilder().withUrl("/PostHub/post").build();
+
+
+        connection.on("ReceivePostUpdate", function (post) {
+            console.log("sdsd");
+            const postRow = document.getElementById(`post-${post.id}`);
+            if (postRow) {
+                postRow.cells[0].textContent = post.createDate;
+                postRow.cells[1].textContent = post.updateDate;
+                postRow.cells[2].textContent = post.title;
+                postRow.cells[3].textContent = post.content;
+                postRow.cells[4].textContent = post.publishStatus;
+                postRow.cells[5].textContent = post.categoryId;
+                postRow.cells[6].textContent = post.userEmail;
+            } else {
+                const newPostRow = document.createElement("tr");
+                newPostRow.id = `post-${post.id}`;
+
+                const createDateCell = document.createElement("td");
+                createDateCell.textContent = post.createDate;
+                newPostRow.appendChild(createDateCell);
+
+                const updateDateCell = document.createElement("td");
+                updateDateCell.textContent = post.updateDate;
+                newPostRow.appendChild(updateDateCell);
+
+                const titleCell = document.createElement("td");
+                titleCell.textContent = post.title;
+                newPostRow.appendChild(titleCell);
+
+                const contentCell = document.createElement("td");
+                contentCell.textContent = post.content;
+                newPostRow.appendChild(contentCell);
+
+                const publishStatusCell = document.createElement("td");
+                publishStatusCell.textContent = post.publishStatus == "0" ? "Publish" : "Private";
+                newPostRow.appendChild(publishStatusCell);
+
+                const categoryIdCell = document.createElement("td");
+                categoryNameCell.textContent = post.categoryName;
+                newPostRow.appendChild(categoryIdCell);
+
+                const userEmailCell = document.createElement("td");
+                userEmailCell.textContent = post.userEmail;
+                newPostRow.appendChild(userEmailCell);
+
+                const actionsCell = document.createElement("td");
+                actionsCell.innerHTML = `<a href="/Edit/${post.id}">Edit</a> | <a href="/Details/${post.id}">Details</a> | <a href="/Delete/${post.id}">Delete</a>`;
+                newPostRow.appendChild(actionsCell);
+
+                const tbody = document.getElementById("postsTableBody");
+                const firstRow = tbody.firstChild;
+                tbody.insertBefore(newPostRow, firstRow);
+            }
+        });
+    </script>
+}

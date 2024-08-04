@@ -1,0 +1,173 @@
+﻿@model IEnumerable<SignalRAssignment_ASM3.Models.Post>
+
+@{
+    ViewData["Title"] = "Posts";
+}
+
+<h1>Posts</h1>
+
+<form id="postForm">
+    <div class="form-group">
+        <label for="Title" class="control-label">Title</label>
+        <input type="text" name="Title" class="form-control" id="Title" />
+    </div>
+    <div class="form-group">
+        <label for="Content" class="control-label">Content</label>
+        <textarea name="Content" class="form-control" id="Content"></textarea>
+    </div>
+    <div class="form-group">
+        <label for="PublishStatus" class="control-label">Publish Status</label>
+        <select name="PublishStatus" class="form-control" id="PublishStatus">
+            <option value="0">Publish</option>
+            <option value="1">Private</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="PostCategoryCategoryId" class="control-label">Category ID</label>
+        <select name="PostCategoryCategoryId" class="form-control" id="CategoryId">
+            <option value="">-- Select Category --</option>
+            @foreach (var category in ViewData["CategoryId"] as SelectList)
+            {
+                <option value="@category.Value">@category.Text</option>
+            }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Title)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Content)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CreateDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UpdateDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PublishStatus)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PostCategory.CategoryName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.User.Email)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="postsTableBody">
+        @foreach (var post in Model)
+        {
+            <tr id="post-@post.PostId">
+                <td>@post.Title</td>
+                <td>@post.Content</td>
+                <td>@post.CreateDate</td>
+                <td>@post.UpdateDate</td>
+                <td>@(post.PublishStatus.Equals("0") ? "Publish" : "Private")</td>
+                <td>@post.PostCategory.CategoryName</td>
+                <td>@post.User.Email</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.11/signalr.min.js"></script>
+    <script type="text/javascript">
+        const connection = new signalR.HubConnectionBuilder().withUrl("/PostHub/post").build();
+
+        connection.on("ReceivePostUpdate", function (post) {
+            console.log(post);
+            const postRow = document.getElementById(`post-${post.postId}`);
+            console.log(post);
+            if (postRow) {
+                postRow.cells[0].textContent = post.title;
+                postRow.cells[1].textContent = post.content;
+                postRow.cells[2].textContent = post.createDate;
+                postRow.cells[3].textContent = post.updateDate;
+                postRow.cells[4].textContent = post.publishStatus;
+                postRow.cells[5].textContent = post.postCategory.categoryName;
+                postRow.cells[6].textContent = post.user.email;
+            } else {
+                const newPostRow = document.createElement("tr");
+                newPostRow.id = `post-${post.postId}`;
+
+                const titleCell = document.createElement("td");
+                titleCell.textContent = post.title;
+                newPostRow.appendChild(titleCell);
+
+                const contentCell = document.createElement("td");
+                contentCell.textContent = post.content;
+                newPostRow.appendChild(contentCell);
+
+                const createDateCell = document.createElement("td");
+                createDateCell.textContent = post.createDate;
+                newPostRow.appendChild(createDateCell);
+
+                const updateDateCell = document.createElement("td");
+                updateDateCell.textContent = post.updateDate;
+                newPostRow.appendChild(updateDateCell);
+
+                const publishStatusCell = document.createElement("td");
+                publishStatusCell.textContent = post.publishStatus == "0" ? "Publish" : "Private";
+                newPostRow.appendChild(publishStatusCell);
+
+                const categoryNameCell = document.createElement("td");
+                categoryNameCell.textContent = post.categoryName;
+                newPostRow.appendChild(categoryNameCell);
+
+                const userEmailCell = document.createElement("td");
+                userEmailCell.textContent = post.userEmail;
+                newPostRow.appendChild(userEmailCell);
+
+                const tbody = document.getElementById("postsTableBody");
+                const firstRow = tbody.firstChild;
+                tbody.insertBefore(newPostRow, firstRow);
+            }
+        });
+
+        connection.start().catch(function (err) {
+            return console.error(err.toString());
+        });
+
+        document.getElementById("postForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const postObject = {};
+            formData.forEach((value, key) => {
+                postObject[key] = value;
+            });
+            const selectedCategoryId = formData.get("PostCategoryCategoryId");
+
+            const categories = @Html.Raw(Json.Serialize(ViewData["CategoryId"]));
+            const selectedCategory = categories.find(category => category.value === selectedCategoryId);
+            postObject["CategoryName"] = selectedCategory ? selectedCategory.text : "";
+
+
+            fetch("/Posts/Create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(postObject)
+            }).then(response => response.json()).then(data => {
+                event.target.reset();
+            }).catch(error => console.error("Error:", error));
+        });
+    </script>
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

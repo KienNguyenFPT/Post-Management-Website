@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\SignalRAssignment-ASM3.props" />
+</Project>

@@ -1,0 +1,61 @@
+﻿@model SignalRAssignment_ASM3.Models.ReportViewModel
+
+@{
+    ViewData["Title"] = "Report";
+}
+
+<h2>Report</h2>
+
+<form asp-action="Report" method="get" class="form-inline">
+    <div class="form-group mb-2">
+        <label for="startDate" class="sr-only">Start Date</label>
+        <input type="datetime-local" class="form-control" id="startDate" name="startDate" required />
+    </div>
+    <div class="form-group mx-sm-3 mb-2">
+        <label for="endDate" class="sr-only">End Date</label>
+        <input type="datetime-local" class="form-control" id="endDate" name="endDate" required />
+    </div>
+    <button type="submit" class="btn btn-primary mb-2">Generate Report</button>
+</form>
+
+@if (Model != null)
+{
+    <h2>Report from @Model.StartDate.ToString("dd/MM/yyyy") to @Model.EndDate.ToString("dd/MM/yyyy")</h2>
+
+    <p>Total posts: @Model.PostCount</p>
+
+    <h3>Top User</h3>
+    @if (Model.TopUser != null)
+    {
+        <p>User: @Model.TopUser.FullName (@Model.TopUser.Email)</p>
+        <p>Number of posts: @Model.TopUserPostCount</p>
+    }
+    else
+    {
+        <p>No posts found in the given date range.</p>
+    }
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Post ID</th>
+                <th>Title</th>
+                <th>Update Date</th>
+                <th>Category</th>
+                <th>User</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var post in Model.Posts)
+            {
+                <tr>
+                    <td>@post.PostId</td>
+                    <td>@post.Title</td>
+                    <td>@post.UpdateDate</td>
+                    <td>@post.PostCategory?.CategoryName</td>
+                    <td>@post.User?.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
